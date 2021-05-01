@@ -9,8 +9,35 @@ object UserHolder {
             fullName: String,
             email: String,
             password: String
-    ): User = User.makeUser(fullName, email = email, password = password)
-            .also { user -> map[user.login] = user }
+    ): User {
+        val user = User.makeUser(fullName, email = email, password = password)
+        if (user.login in map ) {
+            throw IllegalArgumentException("A user with this email already exists")
+        }
+        map[user.login] = user
+        return user
+
+    }
+
+    fun registerUserByPhone(
+            fullName: String,
+            rawPhone: String
+    ): User {
+        validatePhone(rawPhone)
+        val user = User.makeUser(fullName, phone = rawPhone)
+        if (rawPhone in map ) {
+            throw IllegalArgumentException("A user with this phone already exists")
+        }
+        map[rawPhone] = user
+        return user
+    }
+
+    private fun validatePhone(rawPhone: String) {
+        if ("""[A-Za-z]+""".toRegex().matches(rawPhone) ||
+                !rawPhone.startsWith("+") ||
+                rawPhone.filter { it.isDigit() }.length != 11)
+        throw IllegalArgumentException("Enter a valid phone number starting with a + and containing 11 digits")
+    }
 
     fun loginUser(login: String, password: String): String? =
             map[login.trim()]?.let {
@@ -18,8 +45,29 @@ object UserHolder {
                 else null
             }
 
+    fun requestAccessCode(login: String) {
+        map[login]?.requestAccessCode()
+    }
+
+    fun importUsers(list: List<String>): List<User> = list.map(::importUser)
+
+    private fun importUser(csv: String): User {
+        val (fullName, email, encrypted, rawPhone) = csv.split(";")
+        val (salt, passwordHash) = encrypted.split(":")
+        return User.makeUser(
+                fullName,
+                email.nullIfBlank(),
+                rawPhone.nullIfBlank(),
+                salt,
+                passwordHash
+        )
+    }
+
+    private fun String.nullIfBlank() = if (isNullOrBlank()) null else this
+
     @VisibleForTesting(otherwise = VisibleForTesting.NONE)
     fun clearHolder() {
         map.clear()
     }
 }
+

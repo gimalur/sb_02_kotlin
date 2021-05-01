@@ -34,7 +34,7 @@ class User private constructor(
         set(value) {
             _login = value.toLowerCase()
         }
-        get() = login!!
+        get() = _login!!
 
     private var salt: String? = null
 
@@ -61,11 +61,29 @@ class User private constructor(
             rawPhone: String
     ) : this(firstName, lastName, rawPhone = rawPhone, meta = mapOf("auth" to "sms")) {
         println("Secondary phone constructor")
+        val code = requestAccessCode()
+        sendAccessCodeToUser(rawPhone, code)
+    }
+
+    //For imported
+    constructor(
+            firstName: String,
+            lastName: String?,
+            email: String?,
+            salt: String?,
+            passwordHash: String,
+            rawPhone: String?
+    ) : this(firstName, lastName, email = email, rawPhone = rawPhone, meta = mapOf("src" to "csv")) {
+        this.salt = salt
+        this.passwordHash = passwordHash
+    }
+
+    fun requestAccessCode(): String {
         val code = generateAccessCode()
         passwordHash = encrypt(code)
         println("Phone passwordHash is $passwordHash")
         accessCode = code
-        sendAccessCodeToUser(rawPhone, code)
+        return code
     }
 
     init {
@@ -150,6 +168,25 @@ class User private constructor(
                 )
                 else -> throw IllegalArgumentException("Email or phone must not be null or blank")
             }
+        }
+
+        fun makeUser(
+                fullName: String,
+                email: String? = null,
+                rawPhone: String? = null,
+                salt: String,
+                passwordHash: String
+        ): User {
+            val (firstName, lastName) = fullName.fullNameToPair()
+
+            return User(
+                    firstName,
+                    lastName,
+                    email,
+                    rawPhone,
+                    salt,
+                    passwordHash
+            )
         }
 
         private fun String.fullNameToPair(): Pair<String, String?> =
