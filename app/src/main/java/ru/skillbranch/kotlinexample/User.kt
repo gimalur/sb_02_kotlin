@@ -70,9 +70,9 @@ class User private constructor(
             firstName: String,
             lastName: String?,
             email: String?,
+            rawPhone: String?,
             salt: String?,
-            passwordHash: String,
-            rawPhone: String?
+            passwordHash: String
     ) : this(firstName, lastName, email = email, rawPhone = rawPhone, meta = mapOf("src" to "csv")) {
         this.salt = salt
         this.passwordHash = passwordHash
