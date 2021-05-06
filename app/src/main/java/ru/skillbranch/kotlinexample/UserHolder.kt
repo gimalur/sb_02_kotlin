@@ -49,7 +49,13 @@ object UserHolder {
         map[login]?.requestAccessCode()
     }
 
-    fun importUsers(list: List<String>): List<User> = list.map(::importUser)
+    fun importUsers(list: List<String>): List<User> = list.mapNotNull {
+        try {
+            importUser(it)
+        } catch (e: Throwable) {
+            null
+        }
+    }
 
     private fun importUser(csv: String): User {
         val (fullName, email, encrypted, rawPhone) = csv.split(";")
