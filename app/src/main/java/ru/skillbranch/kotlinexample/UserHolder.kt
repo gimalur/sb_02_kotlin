@@ -16,7 +16,6 @@ object UserHolder {
         }
         map[user.login] = user
         return user
-
     }
 
     fun registerUserByPhone(
@@ -49,24 +48,47 @@ object UserHolder {
         map[login]?.requestAccessCode()
     }
 
-    fun importUsers(list: List<String>): List<User> = list.mapNotNull {
-        try {
-            importUser(it)
-        } catch (e: Throwable) {
-            null
-        }
-    }
+    fun importUsers(list: List<String>): List<User> = list.mapNotNull { importUser(it) }
 
     private fun importUser(csv: String): User {
         val (fullName, email, encrypted, rawPhone) = csv.split(";")
         val (salt, passwordHash) = encrypted.split(":")
-        return User.makeUser(
-                fullName,
-                email.nullIfBlank(),
-                rawPhone.nullIfBlank(),
-                salt,
-                passwordHash
+        return registerImportedUser(
+            fullName,
+            email.nullIfBlank(),
+            rawPhone.nullIfBlank(),
+            salt,
+            passwordHash
         )
+    }
+
+    private fun registerImportedUser(
+        fullName: String,
+        email: String? = null,
+        rawPhone: String? = null,
+        salt: String,
+        passwordHash: String
+    ): User {
+        val user = User.makeUser(
+            fullName,
+            email,
+            rawPhone,
+            salt,
+            passwordHash
+        )
+        if (rawPhone != null) {
+            validatePhone(rawPhone)
+            if (rawPhone in map ) {
+                throw IllegalArgumentException("A user with this phone already exists")
+            }
+            map[rawPhone] = user
+        } else {
+            if (user.login in map ) {
+                throw IllegalArgumentException("A user with this email already exists")
+            }
+            map[user.login] = user
+        }
+        return user
     }
 
     private fun String.nullIfBlank() = if (isNullOrBlank()) null else this
